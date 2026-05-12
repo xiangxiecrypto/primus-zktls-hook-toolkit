@@ -48,12 +48,6 @@ read top-to-bottom; later docs assume the earlier ones.
 | 7 | [Custom verifiers](docs/07-custom-verifier.md) | Writing your own `IAttestationExtensionVerifier`, walking through `LLMAnswerLengthVerifier` as a worked example. |
 | 8 | [Troubleshooting](docs/08-troubleshooting.md) | Every non-obvious gotcha we hit on the road to a green end-to-end, with the fix for each. |
 
-The original [design document](zkTLS-Hook-Design.md) (~90KB Chinese) is the
-authoritative source for the protocol-level design rationale and is
-referenced from the docs above when needed.
-
----
-
 ## Quick start
 
 ```bash
