@@ -1,0 +1,28 @@
+# Compiler files
+cache/
+out/
+
+# Commonly ignored directories
+.logs/
+.ignore/
+
+# Ignores development broadcast logs
+!/broadcast
+/broadcast/*/31337/
+/broadcast/**/dry-run/
+
+# Dotenv file
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+sdk/dist/
+
+# Real-attestation fixtures are produced ad-hoc by running the SDK against
+# Primus SaaS. Keep them out of git — they embed the signing-attestor of
+# the day and aren't reproducible. Only the synthetic SDK fixture is
+# checked in.
+test/fixtures/real-*.hex
+test/fixtures/real-*.json

@@ -1,0 +1,42 @@
+{
+  "name": "@primus-zktls/hook-sdk",
+  "version": "0.1.0",
+  "description": "Off-chain companion SDK for ZkTlsAttestationHook. Builds AttestationSpec from a JS job definition, drives multi-step zkTLS attestation via @primuslabs/zktls-core-sdk, and ABI-encodes the result for ERC-8183 submit().",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "peerDependencies": {
+    "@primuslabs/zktls-core-sdk": "^0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@primuslabs/zktls-core-sdk": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

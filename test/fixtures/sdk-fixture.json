@@ -1,0 +1,47 @@
+{
+  "provider": "0x000000000000000000000000000000000000b0b1",
+  "job": {
+    "steps": [
+      {
+        "method": "GET",
+        "url": "https://api.example.com/coins/bitcoin",
+        "responseResolves": [
+          {
+            "keyName": "id",
+            "parseType": "json",
+            "parsePath": "$.id"
+          }
+        ],
+        "attMode": "proxytls"
+      },
+      {
+        "method": "GET",
+        "url": "https://api.example.com/coins/<<id>>/x",
+        "responseResolves": [
+          {
+            "keyName": "price_usd",
+            "parseType": "json",
+            "parsePath": "$.market_data.current_price.usd"
+          }
+        ],
+        "attMode": "proxytls"
+      }
+    ],
+    "bindings": [
+      {
+        "fromStep": 0,
+        "fromKey": "id",
+        "toStep": 1,
+        "toLocation": "url",
+        "value": "bitcoin"
+      }
+    ]
+  },
+  "spec": {
+    "stepCount": 2,
+    "bindingCount": 1,
+    "deliverableSourceStep": 1
+  },
+  "attestationCount": 2,
+  "deliverable": "0x0d91d53ceb974823153158ec6121bcda5f4a6c40b7ea9032d320006ddc78590c"
+}

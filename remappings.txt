@@ -1,0 +1,5 @@
+@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
+@erc8183-hooks/=lib/hook-contracts/contracts/
+@erc8183/=lib/hook-contracts/contracts/erc8183/contracts/
+forge-std/=lib/forge-std/src/
