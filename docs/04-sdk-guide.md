@@ -263,6 +263,38 @@ of these bytes is a useful "spec ID" for indexers.
 
 ## 4.5 Provider side: running the job
 
+### 4.5.1 Get Primus credentials
+
+The provider talks to Primus's SaaS attestor service, which authenticates
+the caller via an `appId` + `appSecret` pair. To obtain them:
+
+1. Open the Primus developer dashboard at
+   **[dev.primuslabs.xyz](https://dev.primuslabs.xyz/)**.
+2. Sign in (the dashboard accepts a wallet signature or an email login,
+   depending on what's currently exposed).
+3. Create a new application — pick any name and description; the
+   permissioning is per-application.
+4. Copy the generated `appId` and `appSecret`.
+
+Then expose them as environment variables in the shell that runs your
+provider script:
+
+```bash
+export PRIMUS_APP_ID="0x..."
+export PRIMUS_APP_SECRET="0x..."
+```
+
+Treat the `appSecret` as a secret — store it in your secrets manager, not
+in source. The `appId` is identifier-only and safer to log/print.
+
+If you don't yet have credentials, you can still run **every test in the
+toolkit except the on-chain E2E scripts** — the SDK unit tests use a
+mock attestor (`AttestorFn`) and the Solidity tests use an always-accept
+mock zkTLS verifier. Only `runJob` against the real Primus SaaS needs real
+credentials.
+
+### 4.5.2 Wire it up
+
 The provider needs `@primuslabs/zktls-core-sdk` *and* this SDK's
 `runJob`. They wire together like this:
 

@@ -49,6 +49,17 @@ const fundOptParams = encodeFundOptParams(buildSpec(job));
 
 ## Provider side — running the job
 
+The provider needs Primus credentials. Create an app at
+**[dev.primuslabs.xyz](https://dev.primuslabs.xyz/)**, copy the generated
+`appId` and `appSecret`, and pass them via env:
+
+```bash
+export PRIMUS_APP_ID="0x..."
+export PRIMUS_APP_SECRET="0x..."
+```
+
+Then:
+
 ```ts
 import { PrimusCoreTLS } from "@primuslabs/zktls-core-sdk";
 import { runJob, createPrimusAttestor } from "@primus-zktls/hook-sdk";
