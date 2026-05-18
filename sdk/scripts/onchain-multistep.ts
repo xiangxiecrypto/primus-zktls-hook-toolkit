@@ -28,22 +28,23 @@ import { baseSepolia, type JobDefinition } from "../src/index.js";
 const CORE = baseSepolia.erc8183Core;
 const HOOK = baseSepolia.hook;
 
-// Two small, deterministic CoinGecko calls. Each picks a distinct currency
-// quote (USD then EUR) so the responses differ; the binding value "bitcoin"
-// must appear in both step 0's parsed data and step 1's substituted URL.
+// Two CoinGecko calls bridged by the static value "bitcoin".
 //
-// Step 0 response shape: {"bitcoin":{"usd":80000}}.
-// SDK keyName="bitcoin_usd_value" → att[0].data = `{"bitcoin_usd_value":"80000"}`.
-// The string "bitcoin" then appears as a substring of `bitcoin_usd_value`,
-// satisfying the binding's source-side check.
+// v2 NOTE: the hook uses _containsBounded, requiring matches to be bracketed
+// by `" , } : & = /`. Step 0 must therefore produce parsed data where
+// "bitcoin" is itself a quote-delimited JSON value (not part of a longer
+// identifier like "bitcoin_usd_value"). We resolve `$[0].id` from
+// /coins/markets, which yields att.data = {"coin_id":"bitcoin"} — the
+// `"bitcoin"` substring is properly bracketed by `"` on both sides.
+// Step 1's URL has the value bracketed by `=` and `&`.
 const job: JobDefinition = {
   steps: [
     {
       method: "GET",
-      url: "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+      url: "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin&per_page=1",
       header: { "user-agent": "Mozilla/5.0" },
       responseResolves: [
-        { keyName: "bitcoin_usd_value", parseType: "json", parsePath: "$.bitcoin.usd" },
+        { keyName: "coin_id", parseType: "json", parsePath: "$[0].id" },
       ],
       attMode: "proxytls",
       maxAgeSeconds: 3600,
@@ -65,9 +66,8 @@ const job: JobDefinition = {
       fromKey: "id",
       toStep: 1,
       toLocation: "url",
-      // Static binding value — must appear in both step 0's parsed data
-      // (substring of keyName "bitcoin_usd_value") and step 1's
-      // substituted request URL ("?ids=bitcoin&..." after replacement).
+      // Step 0 data → {"coin_id":"bitcoin"} : "bitcoin" bounded by `"`/`"`
+      // Step 1 URL → ?ids=bitcoin&... : "bitcoin" bounded by `=`/`&`
       value: "bitcoin",
     },
   ],

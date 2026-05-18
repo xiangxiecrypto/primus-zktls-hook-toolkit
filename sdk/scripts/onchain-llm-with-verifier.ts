@@ -43,11 +43,15 @@ const llmKey = req("LLM_API_KEY");
 const verifierAddr = (process.env.VERIFIER_ADDR ??
   baseSepolia.llmAnswerLengthVerifier_loose) as Address;
 
+// Same v2 bounded-substring shape as onchain-llm.ts: user content is just
+// `<<id>>` so it lands as a quote-delimited JSON value; step 0 extracts
+// $[0].id from /coins/markets so the parsed data carries "bitcoin" between
+// quotes.
 const llmBody = JSON.stringify({
   model: llmModel,
   messages: [
-    { role: "system", content: "Reply in one short sentence." },
-    { role: "user", content: "Name one quirky fact about <<id>>." },
+    { role: "system", content: "The user message is a cryptocurrency name. Reply with one quirky fact about it in one short sentence." },
+    { role: "user", content: "<<id>>" },
   ],
   temperature: 0,
 });
@@ -56,10 +60,10 @@ const job: JobDefinition = {
   steps: [
     {
       method: "GET",
-      url: "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+      url: "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin&per_page=1",
       header: { "user-agent": "Mozilla/5.0" },
       responseResolves: [
-        { keyName: "bitcoin_usd_value", parseType: "json", parsePath: "$.bitcoin.usd" },
+        { keyName: "coin_id", parseType: "json", parsePath: "$[0].id" },
       ],
       attMode: "proxytls",
       maxAgeSeconds: 3600,

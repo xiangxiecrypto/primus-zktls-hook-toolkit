@@ -25,7 +25,7 @@ import {
   http,
   type Address,
 } from "viem";
-import { baseSepolia } from "viem/chains";
+import { baseSepolia as baseSepoliaChain } from "viem/chains";
 import { privateKeyToAccount as pkToAccount } from "viem/accounts";
 import { runJob, createPrimusAttestor, buildSpec } from "../src/index.js";
 import { encodeFundOptParams } from "../src/encoding.js";
@@ -33,10 +33,10 @@ import type { JobDefinition } from "../src/types.js";
 
 // Live addresses live in src/addresses.ts; imported here so the demo script
 // and downstream consumers reference one source of truth.
-import { baseSepolia } from "../src/addresses.js";
-const CORE = baseSepolia.erc8183Core;
-const HOOK = baseSepolia.hook;
-const USDC = baseSepolia.mockUsdc;
+import { baseSepolia as baseSepoliaAddrs } from "../src/addresses.js";
+const CORE = baseSepoliaAddrs.erc8183Core;
+const HOOK = baseSepoliaAddrs.hook;
+const USDC = baseSepoliaAddrs.mockUsdc;
 
 // Hand-rolled ABI for the four lifecycle calls we make.
 const erc8183Abi = [
@@ -136,9 +136,14 @@ async function main() {
   console.log("provider                  :", provider.address);
 
   const transport = http("https://sepolia.base.org");
-  const publicClient = createPublicClient({ chain: baseSepolia, transport });
-  const deployerWallet = createWalletClient({ account: deployer, chain: baseSepolia, transport });
-  const providerWallet = createWalletClient({ account: provider, chain: baseSepolia, transport });
+  const publicClient = createPublicClient({ chain: baseSepoliaChain, transport });
+  const deployerWallet = createWalletClient({ account: deployer, chain: baseSepoliaChain, transport });
+  const providerWallet = createWalletClient({ account: provider, chain: baseSepoliaChain, transport });
+
+  // Public Base Sepolia RPC sometimes fails EIP-1559 fee estimation; pin fees.
+  // Quick smoke test that the RPC itself is healthy.
+  const head = await publicClient.getBlockNumber();
+  console.log("rpc head block             :", head.toString());
 
   // ----- 1) createJob (client) — or reuse an existing one ---------------------
 
@@ -197,10 +202,15 @@ async function main() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await primus.init(appId, appSecret, "auto" as any);
 
+  // v2 per-job binding context — must match what client passes to
+  // buildSpec, so the additionParams Primus signs over matches the spec's
+  // additionParamsHash.
+  const ctx = { jobId, hookAddress: HOOK, chainId: baseSepoliaChain.id };
+
   // Primus SaaS occasionally returns transient "unstable internet" errors —
   // retry a few times with backoff before giving up.
   const attResult = await retry(
-    () => runJob(job, { recipient: provider.address, attestor: createPrimusAttestor(primus) }),
+    () => runJob(job, { recipient: provider.address, attestor: createPrimusAttestor(primus), ctx }),
     { attempts: 4, backoffMs: 3000 },
   );
   const { attestations, deliverable, submitOptParams } = attResult;
@@ -209,7 +219,7 @@ async function main() {
 
   // ----- 3) fund (client) — passes the spec to the hook -----------------------
 
-  const spec = buildSpec(job);
+  const spec = buildSpec(job, ctx);
   const fundOptParams = encodeFundOptParams(spec);
 
   console.log("\n[3/4] fund (client locks spec into hook)...");
@@ -220,7 +230,7 @@ async function main() {
     args: [jobId, 0n, fundOptParams],
   });
   console.log("  tx:", basescan(fundTx));
-  await publicClient.waitForTransactionReceipt({ hash: fundTx });
+  await publicClient.waitForTransactionReceipt({ hash: fundTx, confirmations: 2 });
 
   // ----- 4) submit (provider) — passes the real attestation to the hook -------
 

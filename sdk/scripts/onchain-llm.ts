@@ -49,19 +49,18 @@ const llmUrl = req("LLM_URL").replace(/\/$/, ""); // strip trailing slash
 const llmModel = req("LLM_MODEL");
 const llmKey = req("LLM_API_KEY");
 
-// Body sent to the LLM. <<id>> is substituted to "bitcoin" by the SDK from
-// the binding. The user prompt deliberately phrases the LLM's task narrowly
-// so the response is short and predictable; we are testing the attestation
-// pipeline, not LLM quality.
+// Body sent to the LLM. The user message content IS just `<<id>>` so after
+// substitution it becomes the JSON literal `"bitcoin"` — bounded by `"` on
+// both sides, which v2's _containsBounded requires.
+//
+// The system message carries the actual instruction; the user message is
+// the bridging value.
 const llmBody = JSON.stringify({
   model: llmModel,
   messages: [
-    { role: "system", content: "Reply in one short sentence." },
-    { role: "user", content: "Name one quirky fact about <<id>>." },
+    { role: "system", content: "The user message is a cryptocurrency name. Reply with one quirky fact about it in one short sentence." },
+    { role: "user", content: "<<id>>" },
   ],
-  // temperature: 0 helps reproducibility a bit, though LLMs aren't fully
-  // deterministic. The hook doesn't check semantic content — only that the
-  // request shape and response data flow match the pinned spec.
   temperature: 0,
 });
 
@@ -69,10 +68,13 @@ const job: JobDefinition = {
   steps: [
     {
       method: "GET",
-      url: "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+      // /coins/markets returns [{"id":"bitcoin","symbol":"btc",...}] —
+      // small payload Primus handles reliably and yields a quote-delimited
+      // "bitcoin" once we extract $[0].id.
+      url: "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin&per_page=1",
       header: { "user-agent": "Mozilla/5.0" },
       responseResolves: [
-        { keyName: "bitcoin_usd_value", parseType: "json", parsePath: "$.bitcoin.usd" },
+        { keyName: "coin_id", parseType: "json", parsePath: "$[0].id" },
       ],
       attMode: "proxytls",
       maxAgeSeconds: 3600,
@@ -103,9 +105,8 @@ const job: JobDefinition = {
       fromKey: "id",
       toStep: 1,
       toLocation: "body",
-      // Static binding value: "bitcoin" appears in step 0 data (substring
-      // of keyName "bitcoin_usd_value") and in step 1's POST body (the
-      // substituted <<id>> in the user prompt).
+      // Step 0 data → {"coin_id":"bitcoin"}        : bounded by `"`
+      // Step 1 body→ ...,"content":"bitcoin"},...  : bounded by `"`
       value: "bitcoin",
     },
   ],

@@ -168,7 +168,17 @@ export async function runScenario(opts: RunOpts) {
     console.log("  jobId:", jobId.toString());
   }
 
-  // 2) Real Primus attestation
+  // 2) Build the per-job binding context. Must be derived BEFORE we call
+  //    Primus — the binding hash needs to land in the signed attestation's
+  //    additionParams so the v2 hook's _verifyOneStep finds it.
+  const ctx = {
+    jobId,
+    hookAddress: hook,
+    chainId: baseSepolia.id,
+  };
+  console.log("  job binding ctx :", { jobId: jobId.toString(), hookAddress: hook, chainId: baseSepolia.id });
+
+  // 3) Real Primus attestation
   console.log("\n[2/5] generating real Primus attestation(s)...");
   const primus = new PrimusCoreTLS();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -177,6 +187,7 @@ export async function runScenario(opts: RunOpts) {
     () => runJob(scenario.job, {
       recipient: provider.address,
       attestor: createPrimusAttestor(primus),
+      ctx,
     }),
     { attempts: primusRetryAttempts, backoffMs: primusRetryMs },
   );
@@ -186,8 +197,9 @@ export async function runScenario(opts: RunOpts) {
     console.log(`           data: ${truncate(a.data, 80)}`);
   });
 
-  // 3) fund (client)
-  const spec = buildSpec(scenario.job);
+  // 4) fund (client) — builds spec with the same ctx so spec hashes match
+  //    the attestor-signed additionParams.
+  const spec = buildSpec(scenario.job, ctx);
   const fundOptParams = encodeFundOptParams(spec);
   console.log("\n[3/5] fund (client locks spec into hook)...");
   const fundTx = await deployerWallet.writeContract({
