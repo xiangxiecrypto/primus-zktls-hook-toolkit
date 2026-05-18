@@ -66,7 +66,7 @@ contract RealAttestationE2ETest is Test {
         vm.createSelectFork(rpc);
 
         core = new MockCore();
-        hook = new ZkTlsAttestationHook(address(core), PRIMUS_BASE_SEPOLIA);
+        hook = new ZkTlsAttestationHook(address(core), PRIMUS_BASE_SEPOLIA, address(0xada));
         core.setJob(JOB_ID, address(hook), PROVIDER);
 
         ready = true;

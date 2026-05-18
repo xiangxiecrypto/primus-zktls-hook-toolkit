@@ -14,12 +14,32 @@ const ATTESTATION_TUPLE =
   "(address attestorAddr,string url)[] attestors," +
   "bytes[] signatures)";
 
+// RequestStep now includes expectedJobBinding (bytes32), timeUnit (uint8 enum),
+// allowedAttestors (address[]) and minAttestorsRequired (uint8) — and no longer
+// has pinnedAttestor.
+const REQUEST_STEP_TUPLE =
+  "(bytes32 methodHash," +
+  "bytes32 urlHash," +
+  "bytes32 bodyHash," +
+  "bytes32 responseResolveHash," +
+  "bytes32 additionParamsHash," +
+  "bytes32 expectedJobBinding," +
+  "uint64 maxAge," +
+  "uint8 timeUnit," +
+  "address[] allowedAttestors," +
+  "uint8 minAttestorsRequired)";
+
+// DataBinding now carries fromExtractKey alongside the static value.
+const DATA_BINDING_TUPLE =
+  "(uint8 fromStep,uint8 toStep,uint8 toLocation,bytes value,bytes fromExtractKey)";
+
 const SPEC_TUPLE =
   "(" +
-  "(bytes32 methodHash,bytes32 urlHash,bytes32 bodyHash,bytes32 responseResolveHash,bytes32 additionParamsHash,uint64 maxAge,address pinnedAttestor)[] steps," +
-  "(uint8 fromStep,uint8 toStep,uint8 toLocation,bytes value)[] bindings," +
+  REQUEST_STEP_TUPLE + "[] steps," +
+  DATA_BINDING_TUPLE + "[] bindings," +
   "uint8 deliverableSourceStep," +
   "address customVerifier," +
+  "address zkTlsVerifierSnapshot," +
   "bool configured" +
   ")";
 

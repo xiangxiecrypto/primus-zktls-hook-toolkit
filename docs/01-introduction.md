@@ -4,6 +4,12 @@
 > designers, integrators, auditors, curious readers. No prior knowledge of
 > ERC-8183 or zkTLS assumed; familiarity with Solidity and TypeScript helps.
 
+> **v2 review-fixes update.** The toolkit is at v2 of the hook contract,
+> covering 12 review items from PR #46. Concepts that were "static-only"
+> in v1 (like attestor pinning and data bindings) now also support more
+> flexible variants. The original narrative below remains accurate; v2
+> additions are flagged in each chapter.
+
 ## 1.1 What problem does this solve?
 
 ERC-8183 is a minimal protocol for AI-agent-to-agent commerce: a client

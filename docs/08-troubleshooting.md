@@ -6,6 +6,32 @@
 
 Each entry: symptom, root cause, fix. Skim the symptoms first.
 
+> **v2 review-fixes — new gotchas to know about.** In addition to the v1
+> entries below:
+>
+> - **`SpecRequired()`** — fund tx reverts because optParams was empty.
+>   Was a silent no-op in v1; now hard error. Always pass
+>   `encodeFundOptParams(buildSpec(job, ctx))`.
+> - **`JobBindingMissing()`** — the attestation's `additionParams`
+>   doesn't contain the hex of the per-job binding. Cause: client and
+>   provider used different `ctx` objects, or the provider's attestor
+>   stripped/altered `additionParams`. Solution: pin the JobDefinition
+>   in shared storage, derive `ctx` identically on both sides.
+> - **`InvalidJobBinding()`** — at fund time, `step.expectedJobBinding`
+>   doesn't equal `keccak256(jobId, address(this), chainid)`. Cause:
+>   client built the spec for a different jobId / chain / hook.
+> - **`InvalidMaxAge()`** — `maxAge` is 0 or > 24 hours.
+> - **`UnsatisfiableStep()`** — all three of `methodHash` / `urlHash` /
+>   `bodyHash` are zero — almost certainly a misconfig. Pin at least one.
+> - **`AttestorQuorumNotMet()`** — `step.minAttestorsRequired` not
+>   satisfied by `att.attestors ∩ step.allowedAttestors`.
+> - **`ExtensionVerifierNotTrusted()`** — customVerifier is not on the
+>   hook's allowlist. Owner must call `setTrustedExtensionVerifier`.
+> - **`NotAContract()`** — verifier or customVerifier address has no
+>   code (an EOA, or a destroyed contract).
+> - **`RotationDelayNotElapsed()` / `NoPendingVerifier()`** — verifier
+>   rotation flow: propose, wait 7 days, then activate.
+
 ---
 
 ## 8.1 Decoding hook revert selectors

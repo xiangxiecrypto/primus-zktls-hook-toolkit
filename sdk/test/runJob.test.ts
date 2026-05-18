@@ -1,9 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { keccak256, toBytes } from "viem";
 import { runJob, type AttestorFn } from "../src/runJob.js";
-import type { Attestation, JobDefinition } from "../src/types.js";
+import type { Attestation, JobBindingContext, JobDefinition } from "../src/types.js";
 
 const PROVIDER = "0x000000000000000000000000000000000000b0b1";
+
+const CTX: JobBindingContext = {
+  jobId: 1n,
+  hookAddress: "0xd954517b4c4f0d3a9be69f4d4e2cbc6f30ed9d1a",
+  chainId: 84532,
+};
 
 function mockAttestor(dataPerStep: string[]): AttestorFn {
   let i = 0;
@@ -46,6 +52,7 @@ describe("runJob", () => {
     const result = await runJob(job, {
       recipient: PROVIDER,
       attestor: mockAttestor(['{"p":42}']),
+      ctx: CTX,
     });
 
     expect(result.attestations).toHaveLength(1);
@@ -74,7 +81,7 @@ describe("runJob", () => {
     };
 
     const attestor = vi.fn(mockAttestor(['{"id":"bitcoin"}', '{"p":67234.51}']));
-    await runJob(job, { recipient: PROVIDER, attestor });
+    await runJob(job, { recipient: PROVIDER, attestor, ctx: CTX });
 
     // Step 1's URL is the substituted form, not the template.
     expect(attestor.mock.calls[1]![0].request.url).toBe(
@@ -102,6 +109,7 @@ describe("runJob", () => {
     const result = await runJob(job, {
       recipient: PROVIDER,
       attestor: mockAttestor(["first-step", "second-step"]),
+      ctx: CTX,
     });
     expect(result.deliverable).toBe(keccak256(toBytes("first-step")));
   });
@@ -126,7 +134,7 @@ describe("runJob", () => {
       attestors: [],
       signatures: [],
     });
-    await expect(runJob(job, { recipient: PROVIDER, attestor: badAttestor })).rejects.toThrow(
+    await expect(runJob(job, { recipient: PROVIDER, attestor: badAttestor, ctx: CTX })).rejects.toThrow(
       /wrong url/,
     );
   });
@@ -141,7 +149,7 @@ describe("runJob", () => {
       bindings: [],
       deliverableSourceStep: 5,
     };
-    await expect(runJob(job, { recipient: PROVIDER, attestor: mockAttestor([]) })).rejects.toThrow(
+    await expect(runJob(job, { recipient: PROVIDER, attestor: mockAttestor([]), ctx: CTX })).rejects.toThrow(
       /out of range/,
     );
   });
@@ -158,7 +166,7 @@ describe("runJob", () => {
     const failing: AttestorFn = async () => {
       throw new Error("primus offline");
     };
-    await expect(runJob(job, { recipient: PROVIDER, attestor: failing })).rejects.toThrow(
+    await expect(runJob(job, { recipient: PROVIDER, attestor: failing, ctx: CTX })).rejects.toThrow(
       /primus offline/,
     );
   });

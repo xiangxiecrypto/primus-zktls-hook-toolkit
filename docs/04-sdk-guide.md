@@ -220,16 +220,29 @@ because dynamic prompts often contain those characters.
 
 ## 4.4 Client side: building & encoding the spec
 
-The client takes the `JobDefinition` and produces two artifacts:
+The client takes the `JobDefinition` plus a **job-binding context** and produces two artifacts:
 
 ```ts
-import { buildSpec, encodeFundOptParams } from "@primus-zktls/hook-sdk";
+import { buildSpec, encodeFundOptParams, baseSepolia } from "@primus-zktls/hook-sdk";
 
-const spec = buildSpec(job);             // AttestationSpec (Solidity-shaped object)
-const fundOptParams = encodeFundOptParams(spec);  // Hex bytes for fund()
+const ctx = {
+  jobId: jobIdFromCreateJob,      // bigint
+  hookAddress: baseSepolia.hook,  // address of the deployed hook
+  chainId: 84532,                 // number
+};
+
+const spec = buildSpec(job, ctx);                   // AttestationSpec (Solidity-shaped)
+const fundOptParams = encodeFundOptParams(spec);    // Hex bytes for fund()
 ```
 
 That's it. Now the client can call `ERC8183.fund(jobId, 0, fundOptParams)`.
+
+> **Why `ctx`?** Since the **v2 review-fixes update**, the hook enforces
+> a per-job binding: `keccak256(jobId, hookAddress, chainId)` must appear in
+> each attestation's `additionParams`. The SDK derives this from `ctx` and
+> bakes it into the spec's `expectedJobBinding` field. Provider's `runJob`
+> must use the SAME `ctx` so the attestation Primus signs over carries the
+> same binding string — otherwise submit reverts `JobBindingMissing`.
 
 ### What `buildSpec` actually does
 
@@ -312,6 +325,7 @@ await primus.init(
 const result = await runJob(job, {
   recipient: providerAddress,              // baked into att.recipient
   attestor: createPrimusAttestor(primus),  // swap-out point — see §4.9
+  ctx,                                     // SAME context the client used in buildSpec
 });
 
 // result has:
@@ -585,16 +599,18 @@ forge test --match-path 'test/integration/SdkCrossValidation*'
 
 | Export | Pure? | Used by | Purpose |
 |---|---|---|---|
-| `buildSpec(job)` | yes | client | `JobDefinition → AttestationSpec` |
+| `buildSpec(job, ctx)` | yes | client | `JobDefinition + JobBindingContext → AttestationSpec` |
+| `computeJobBinding(ctx)` | yes | both | `keccak256(jobId, hookAddr, chainId)` — the binding the hook expects |
 | `encodeFundOptParams(spec)` | yes | client | spec → bytes for `fund()` |
-| `runJob(job, opts)` | no (calls attestor) | provider | drive all steps, return atts + deliverable + encoded submit bytes |
+| `runJob(job, opts)` | no (calls attestor) | provider | drive all steps, return atts + deliverable + encoded submit bytes; `opts.ctx` is required |
 | `createPrimusAttestor(primus)` | no | provider | wrap `PrimusCoreTLS` into an `AttestorFn` |
 | `encodeSubmitOptParams(atts, custom?)` | yes | provider | `(atts, custom)` → bytes for `submit()` |
 | `computeDeliverable(atts, sourceStep?)` | yes | provider | reproduce hook's deliverable check |
 | `applySubstitutions(template, subs, location)` | yes | both | `<<key>>` resolution with per-location escape |
 | `extractPlaceholders(template)` | yes | both | list `<<key>>` keys in a string |
 | `hashResponseResolves(resolves)` | yes | both | compute the on-chain responseResolveHash |
-| `resolveStep(step, bindings)` | yes | both | resolve a single step's URL + body + additionParams |
+| `resolveStep(step, bindings, ctx)` | yes | both | resolve a single step's URL + body + additionParams (binding-aware) |
+| `TimeUnit` | enum | both | `Seconds = 0` / `Milliseconds = 1` |
 | `baseSepolia` | const | both | pinned deployed addresses |
 | `demoWallets` | const | testing | stable test addresses |
 

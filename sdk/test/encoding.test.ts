@@ -5,6 +5,7 @@ import {
   encodeFundOptParams,
   encodeSubmitOptParams,
 } from "../src/encoding.js";
+import { TimeUnit } from "../src/types.js";
 import type { Attestation, AttestationSpec } from "../src/types.js";
 
 const sampleAtt: Attestation = {
@@ -50,13 +51,17 @@ describe("encodeFundOptParams", () => {
           bodyHash: keccak256(toBytes("")),
           responseResolveHash: keccak256(toBytes("")),
           additionParamsHash: keccak256(toBytes('{"algorithmType":"proxytls"}')),
+          expectedJobBinding: keccak256(toBytes("placeholder")),
           maxAge: 300n,
-          pinnedAttestor: "0x0000000000000000000000000000000000000000",
+          timeUnit: TimeUnit.Milliseconds,
+          allowedAttestors: [],
+          minAttestorsRequired: 0,
         },
       ],
       bindings: [],
       deliverableSourceStep: 0,
       customVerifier: "0x0000000000000000000000000000000000000000",
+      zkTlsVerifierSnapshot: "0x0000000000000000000000000000000000000000",
       configured: false,
     };
     const encoded = encodeFundOptParams(spec);

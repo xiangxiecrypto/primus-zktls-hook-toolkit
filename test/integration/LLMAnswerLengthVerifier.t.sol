@@ -10,7 +10,8 @@ import {
     Attestor,
     RequestStep,
     DataBinding,
-    AttestationSpec
+    AttestationSpec,
+    TimeUnit
 } from "@erc8183-hooks/hooks/ZkTlsAttestationHook.sol";
 import {LLMAnswerLengthVerifier} from "../../contracts/extensions/LLMAnswerLengthVerifier.sol";
 import {IERC8183Hook} from "@erc8183/IERC8183Hook.sol";
@@ -53,6 +54,7 @@ contract LLMAnswerLengthVerifierTest is Test {
     bytes4 internal constant SEL_SUBMIT = bytes4(keccak256("submit(uint256,bytes32,bytes)"));
     address internal constant CLIENT = address(0xc1);
     address internal constant PROVIDER = address(0xb0b);
+    address internal constant OWNER = address(0xada);
     uint256 internal constant JOB_ID = 1;
 
     MockCore internal core;
@@ -62,7 +64,7 @@ contract LLMAnswerLengthVerifierTest is Test {
     function setUp() public {
         core = new MockCore();
         zkVerifier = new AcceptingVerifier();
-        hook = new ZkTlsAttestationHook(address(core), address(zkVerifier));
+        hook = new ZkTlsAttestationHook(address(core), address(zkVerifier), OWNER);
         core.setJob(JOB_ID, address(hook));
         vm.warp(block.timestamp + 1 hours);
     }
@@ -70,6 +72,9 @@ contract LLMAnswerLengthVerifierTest is Test {
     // -------- helpers --------
 
     function _makeAtt(string memory data) internal view returns (Attestation memory) {
+        string memory additionParams = string.concat(
+            '{"algorithmType":"proxytls","jobBinding":"', _toHex(hook.jobBindingFor(JOB_ID)), '"}'
+        );
         return Attestation({
             recipient: PROVIDER,
             request: AttNetworkRequest({url: "https://api.llm.example/chat", header: "", method: "POST", body: "{}"}),
@@ -77,25 +82,43 @@ contract LLMAnswerLengthVerifierTest is Test {
             data: data,
             attConditions: "",
             timestamp: uint64(block.timestamp * 1000),
-            additionParams: "",
+            additionParams: additionParams,
             attestors: new Attestor[](0),
             signatures: new bytes[](0)
         });
     }
 
-    function _step(Attestation memory att) internal pure returns (RequestStep memory) {
+    function _step(Attestation memory att) internal view returns (RequestStep memory) {
         return RequestStep({
             methodHash: keccak256(bytes(att.request.method)),
             urlHash: keccak256(bytes(att.request.url)),
             bodyHash: keccak256(bytes(att.request.body)),
             responseResolveHash: keccak256(abi.encode(new bytes32[](0))),
             additionParamsHash: keccak256(bytes(att.additionParams)),
+            expectedJobBinding: hook.jobBindingFor(JOB_ID),
             maxAge: 300,
-            pinnedAttestor: address(0)
+            timeUnit: TimeUnit.Milliseconds,
+            allowedAttestors: new address[](0),
+            minAttestorsRequired: 0
         });
     }
 
+    function _toHex(bytes32 v) internal pure returns (string memory) {
+        bytes memory out = new bytes(66);
+        out[0] = "0"; out[1] = "x";
+        for (uint256 i = 0; i < 32; ++i) {
+            uint8 b = uint8(v[i]);
+            out[2 + 2*i]     = bytes1((b >> 4) < 10 ? (b >> 4) + 0x30 : (b >> 4) + 0x57);
+            out[2 + 2*i + 1] = bytes1((b & 0x0f) < 10 ? (b & 0x0f) + 0x30 : (b & 0x0f) + 0x57);
+        }
+        return string(out);
+    }
+
     function _fund(LLMAnswerLengthVerifier verifier, Attestation memory att) internal {
+        // Allowlist the extension so _postFund doesn't reject it.
+        vm.prank(OWNER);
+        hook.setTrustedExtensionVerifier(address(verifier), true);
+
         RequestStep[] memory steps = new RequestStep[](1);
         steps[0] = _step(att);
         AttestationSpec memory spec = AttestationSpec({
@@ -103,6 +126,7 @@ contract LLMAnswerLengthVerifierTest is Test {
             bindings: new DataBinding[](0),
             deliverableSourceStep: 0,
             customVerifier: address(verifier),
+            zkTlsVerifierSnapshot: address(0),
             configured: false
         });
         bytes memory data = abi.encode(CLIENT, abi.encode(spec));

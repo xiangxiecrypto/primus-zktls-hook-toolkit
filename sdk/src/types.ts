@@ -38,14 +38,26 @@ export interface Attestation {
   signatures: Hex[];
 }
 
+/** On-chain enum mirror: 0 = Seconds, 1 = Milliseconds. */
+export enum TimeUnit {
+  Seconds = 0,
+  Milliseconds = 1,
+}
+
 export interface RequestStep {
   methodHash: Hex;
   urlHash: Hex;
   bodyHash: Hex;
   responseResolveHash: Hex;
   additionParamsHash: Hex;
+  /** keccak256(abi.encode(jobId, hookAddress, chainId)). Cross-job replay defense. */
+  expectedJobBinding: Hex;
   maxAge: bigint;
-  pinnedAttestor: Address;
+  timeUnit: TimeUnit;
+  /** Allowlist of acceptable attestor signers. Empty = skip the quorum check. */
+  allowedAttestors: Address[];
+  /** Minimum number of `att.attestors` whose address must lie in `allowedAttestors`. 0 = skip. */
+  minAttestorsRequired: number;
 }
 
 export interface DataBinding {
@@ -53,8 +65,10 @@ export interface DataBinding {
   toStep: number;
   /** 0=url, 1=header, 2=body */
   toLocation: number;
-  /** The static bytes the spec expects to flow across this binding. */
+  /** Static expected bytes (used when fromExtractKey is empty). */
   value: Hex;
+  /** Dynamic: name of a JSON key in atts[fromStep].data; the hook extracts its value at submit. */
+  fromExtractKey: Hex;
 }
 
 export interface AttestationSpec {
@@ -62,6 +76,8 @@ export interface AttestationSpec {
   bindings: DataBinding[];
   deliverableSourceStep: number;
   customVerifier: Address;
+  /** Snapshot of the hook's zkTlsVerifier at fund time. The client sets this to address(0); the hook overwrites at _postFund. */
+  zkTlsVerifierSnapshot: Address;
   configured: boolean;
 }
 
@@ -74,14 +90,20 @@ export interface StepDefinition {
   method: string;
   /** URL template; may contain `<<keyName>>` placeholders to be substituted from prior steps. */
   url: string;
-  /** Optional request headers. Stringified to canonical JSON before hashing. */
+  /** Optional request headers. */
   header?: Record<string, string>;
   /** Body template; may contain `<<keyName>>` placeholders. */
   body?: string;
   responseResolves: AttNetworkResponseResolve[];
   attMode?: AlgorithmType;
+  /** Maximum acceptable age of the attestation in seconds. Must be in [1, 24*3600]. */
   maxAgeSeconds?: number;
-  pinnedAttestor?: Address;
+  /** Timestamp unit used by the attestor's `att.timestamp`. Defaults to Milliseconds (Primus convention). */
+  timeUnit?: TimeUnit;
+  /** Attestors that count toward `minAttestorsRequired`. Empty = skip quorum check. */
+  allowedAttestors?: Address[];
+  /** Minimum number of attestation signers that must lie in allowedAttestors. 0 = skip. */
+  minAttestorsRequired?: number;
 }
 
 export interface BindingDefinition {
@@ -89,8 +111,14 @@ export interface BindingDefinition {
   fromKey: string;
   toStep: number;
   toLocation: BindingLocation;
-  /** The actual bytes (UTF-8 string) that must flow from fromStep.data into toStep.<location>. */
-  value: string;
+  /** Static expected value. Set exactly one of {value, fromExtractKey}. */
+  value?: string;
+  /**
+   * Dynamic extraction: name a JSON key in atts[fromStep].data; the hook
+   * extracts its parsed value at submit time and uses that as the substring
+   * to check. Set exactly one of {value, fromExtractKey}.
+   */
+  fromExtractKey?: string;
 }
 
 export interface JobDefinition {
@@ -100,4 +128,14 @@ export interface JobDefinition {
   deliverableSourceStep?: number;
   /** address(0) means no extension verifier. */
   customVerifier?: Address;
+}
+
+/**
+ * Context required by buildSpec and runJob so both sides can derive the
+ * per-job binding identically: `keccak256(abi.encode(jobId, hookAddress, chainId))`.
+ */
+export interface JobBindingContext {
+  jobId: bigint;
+  hookAddress: Address;
+  chainId: number | bigint;
 }

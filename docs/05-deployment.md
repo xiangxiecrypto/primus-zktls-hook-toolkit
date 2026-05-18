@@ -4,6 +4,14 @@
 > deployment, redeploy a fresh stack, or move the toolkit to a different
 > chain.
 
+> **v2 review-fixes status.** The Base Sepolia deployment at
+> `0xd954…9D1A` is the **v1 hook** (the original PR head). The toolkit
+> source has since been updated to v2 (see [README](../README.md) —
+> "Review-fixes update"). To exercise v2 end-to-end on chain, **redeploy
+> with the new 3-arg constructor**: `(erc8183Core, zkTlsVerifier, owner)`.
+> v1 lifecycles 2–7 below remain on-chain receipts of the v1 spec model
+> and are kept for historical reference.
+
 The toolkit has a live deployment on **Base Sepolia (chainId 84532)** with
 every contract verified-by-execution (each one has been used in at least
 one real lifecycle). Pinning these addresses lets the SDK, the tests, the

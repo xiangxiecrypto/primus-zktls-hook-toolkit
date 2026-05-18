@@ -4,7 +4,7 @@
 [submodule "lib/hook-contracts"]
 	path = lib/hook-contracts
 	url = https://github.com/xiangxiecrypto/hook-contracts
-	branch = feature/zktls-attestation-hook
+	branch = feature/zktls-attestation-hook-review-fixes
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts

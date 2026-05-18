@@ -22,9 +22,25 @@ import { dirname, resolve } from "node:path";
 import { runJob } from "../src/runJob.js";
 import { buildSpec } from "../src/specBuilder.js";
 import { encodeFundOptParams } from "../src/encoding.js";
-import type { Attestation, JobDefinition } from "../src/types.js";
+import type { Attestation, JobBindingContext, JobDefinition } from "../src/types.js";
 
 const PROVIDER = "0x000000000000000000000000000000000000b0b1" as const;
+
+// The Solidity cross-validation test deploys a fresh hook with no fixed
+// address, so we use a placeholder hookAddress here. The hook's
+// `jobBindingFor(jobId)` view returns this same hash on chain because
+// `address(this)` resolves to the test's fresh deployment address — to
+// keep the fixture deterministic, the test reads the deployed address at
+// runtime and pretends `CTX.hookAddress` was that same value. See the
+// cross-validation test for how it threads through.
+//
+// In practice we just pick a stable jobId/chainId and let the Solidity
+// side derive the right binding via its own `jobBindingFor`.
+const CTX: JobBindingContext = {
+  jobId: 1n,
+  hookAddress: "0xd954517b4c4f0d3a9be69f4d4e2cbc6f30ed9d1a",
+  chainId: 84532,
+};
 
 // Two-step BTC pipeline:
 //   step 0: GET /coins/bitcoin       → returns {"id":"bitcoin"}
@@ -84,10 +100,11 @@ const mockAttestor = async (input: {
 });
 
 async function main() {
-  const spec = buildSpec(job);
+  const spec = buildSpec(job, CTX);
   const fundOptParams = encodeFundOptParams(spec);
 
   const { attestations, deliverable, submitOptParams } = await runJob(job, {
+    ctx: CTX,
     recipient: PROVIDER,
     attestor: mockAttestor,
   });

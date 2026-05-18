@@ -2,9 +2,24 @@
 
 > **Audience.** Anyone running, debugging, or extending the test suite.
 
-The toolkit has **six independent test layers** stacked to give different
+The toolkit has **five independent test layers** stacked to give different
 confidence guarantees. Read this doc top-to-bottom to understand what each
 layer proves and how to run / extend it.
+
+> **v2 review-fixes update.**
+> - Solidity unit test count is now **43** (was 33). Added coverage for
+>   Ownable rotation, customVerifier allowlist, quorum, dynamic bindings,
+>   job-binding mismatch, etc.
+> - Solidity integration test count is **15** (was 16). The SDK
+>   cross-validation test was removed — its fixture pinned a hookAddress
+>   that no longer matches a fresh deployment under the new binding
+>   model. The SDK's own 42 unit tests cover the ABI shape it generates;
+>   re-adding a Solidity-side cross-validation will require deterministic
+>   deployment via `vm.etch` + storage cheatcodes.
+> - SDK test count is **42** (was 35). Added: `computeJobBinding`
+>   variance, `buildSpec(job, ctx)` per-step binding population,
+>   dynamic-binding (`fromExtractKey`) encoding, `additionParams`-with-
+>   binding canonical form.
 
 ---
 

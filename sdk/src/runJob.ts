@@ -3,10 +3,11 @@ import type {
   Attestation,
   AttNetworkResponseResolve,
   Hex,
+  JobBindingContext,
   JobDefinition,
   StepDefinition,
 } from "./types.js";
-import { resolveStep, buildAdditionParams } from "./specBuilder.js";
+import { resolveStep, buildAdditionParams, computeJobBinding } from "./specBuilder.js";
 import { computeDeliverable, encodeSubmitOptParams } from "./encoding.js";
 
 /**
@@ -39,22 +40,24 @@ export interface RunJobResult {
 /**
  * Execute every step of a job spec in order, producing one attestation per
  * step. Bindings are applied to substitute `<<keyName>>` placeholders in
- * each step's url/body before attestation. The returned `submitOptParams`
- * is the exact bytes the provider passes to ERC-8183's `submit(...)`.
+ * each step's url/body before attestation; the per-job binding is embedded
+ * into `additionParams` so the attestor signs over it (cross-job replay
+ * defense).
  *
- * Failure semantics: if any step's attestor throws, the function rejects
- * immediately — no partial state is recorded on chain.
+ * `opts.ctx` MUST equal the same context the client used in `buildSpec` —
+ * otherwise the hashes/binding won't match the spec on chain.
  */
 export async function runJob(
   job: JobDefinition,
   opts: {
     recipient: Address;
     attestor: AttestorFn;
+    ctx: JobBindingContext;
     /** Bytes to forward verbatim to a customVerifier, if any. */
     customCalldata?: Hex;
   },
 ): Promise<RunJobResult> {
-  const { recipient, attestor, customCalldata = "0x" } = opts;
+  const { recipient, attestor, ctx, customCalldata = "0x" } = opts;
   const attestations: Attestation[] = [];
 
   const stepCount = job.steps.length;
@@ -67,7 +70,7 @@ export async function runJob(
   for (let i = 0; i < stepCount; i++) {
     const step: StepDefinition = job.steps[i]!;
     const bindingsHere = job.bindings.filter(b => b.toStep === i);
-    const resolved = resolveStep(step, bindingsHere);
+    const resolved = resolveStep(step, bindingsHere, ctx);
 
     const att = await attestor({
       recipient,
@@ -81,9 +84,9 @@ export async function runJob(
       additionParams: resolved.additionParams,
     });
 
-    // Defensive guard: attestor implementations are external; verify the
-    // returned attestation matches what we asked for, so a misbehaving
-    // attestor can't silently substitute a different request shape.
+    // Defensive: an attestor implementation that returns a different
+    // request shape from what we asked for would silently break the
+    // on-chain hash checks. Catch it here with a clearer error.
     if (att.request.url !== resolved.url) {
       throw new Error(`runJob: attestor returned wrong url at step ${i}`);
     }
@@ -106,4 +109,4 @@ export async function runJob(
   return { attestations, deliverable, submitOptParams };
 }
 
-export { buildAdditionParams };
+export { buildAdditionParams, computeJobBinding };

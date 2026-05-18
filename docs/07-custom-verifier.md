@@ -11,6 +11,15 @@ unified-layer check passes. If it reverts, the entire `submit` reverts.
 This doc walks through writing one, using the deployed
 `LLMAnswerLengthVerifier` as a worked example.
 
+> **v2 review-fixes update.** customVerifiers must now be on the
+> **owner-curated allowlist** before they can be wired into a spec. After
+> deploying your verifier, the hook owner must call
+> `setTrustedExtensionVerifier(verifier, true)` once. `_postFund` will
+> revert `ExtensionVerifierNotTrusted` for any non-zero customVerifier
+> not on the allowlist. This is intentional — it lets the hook owner
+> reject obviously broken or malicious extensions before they affect
+> users.
+
 ---
 
 ## 7.1 When you need a customVerifier (and when you don't)

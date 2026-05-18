@@ -5,6 +5,20 @@
 > and how the trust boundaries are drawn. After this you should be able to
 > answer "where would a bug here surface?" for any component.
 
+> **v2 review-fixes note.** Since PR #46 review, the hook contract has
+> additional storage and admin functions. The two-layer design is unchanged;
+> the diff is:
+> - Hook is now `Ownable`. Owner can rotate `zkTlsVerifier` (two-step, 7-day
+>   delay) and curate `trustedExtensionVerifiers` (allowlist for customVerifier).
+> - Per-job spec stores a **snapshot** of the verifier at fund time
+>   (`AttestationSpec.zkTlsVerifierSnapshot`), so in-flight jobs are immune
+>   to subsequent rotations.
+> - `RequestStep.pinnedAttestor` (single) → `allowedAttestors[]` +
+>   `minAttestorsRequired` (quorum).
+> - `RequestStep` gains `expectedJobBinding` (cross-job replay defense) and
+>   `timeUnit` (Seconds | Milliseconds).
+> - `DataBinding` gains `fromExtractKey` (dynamic value extraction).
+
 ## 2.1 The five contracts that make a job run
 
 ```

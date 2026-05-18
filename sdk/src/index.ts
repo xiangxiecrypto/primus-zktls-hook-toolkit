@@ -15,13 +15,17 @@ export type {
   StepDefinition,
   BindingDefinition,
   JobDefinition,
+  JobBindingContext,
 } from "./types.js";
+
+export { TimeUnit } from "./types.js";
 
 export { applySubstitutions, escapeForLocation, extractPlaceholders } from "./placeholder.js";
 
 export {
   buildSpec,
   buildAdditionParams,
+  computeJobBinding,
   hashResponseResolves,
   resolveStep,
 } from "./specBuilder.js";

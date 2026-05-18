@@ -13,7 +13,8 @@ import {
     Attestor,
     RequestStep,
     DataBinding,
-    AttestationSpec
+    AttestationSpec,
+    TimeUnit
 } from "@erc8183-hooks/hooks/ZkTlsAttestationHook.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -50,9 +51,9 @@ contract FullLifecycleTest is Test {
         ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
         core = ERC8183(address(proxy));
 
-        // 2) Deploy verifier + hook (constructor takes core + verifier).
+        // 2) Deploy verifier + hook (constructor takes core + verifier + owner).
         verifier = new AcceptingVerifier();
-        hook = new ZkTlsAttestationHook(address(core), address(verifier));
+        hook = new ZkTlsAttestationHook(address(core), address(verifier), ADMIN);
 
         // 3) Deploy USDC mock and admin-whitelist token + hook.
         usdc = new MockUSDC();
@@ -77,7 +78,12 @@ contract FullLifecycleTest is Test {
         return new AttNetworkResponseResolve[](0);
     }
 
-    function _makeAtt(string memory url, string memory data) internal view returns (Attestation memory) {
+    function _makeAtt(uint256 jobId, string memory url, string memory data) internal view returns (Attestation memory) {
+        string memory additionParams = string.concat(
+            '{"algorithmType":"proxytls","jobBinding":"',
+            _toHexString(hook.jobBindingFor(jobId)),
+            '"}'
+        );
         return Attestation({
             recipient: PROVIDER,
             request: AttNetworkRequest({url: url, header: "", method: "GET", body: ""}),
@@ -85,22 +91,39 @@ contract FullLifecycleTest is Test {
             data: data,
             attConditions: "",
             timestamp: uint64(block.timestamp * 1000),
-            additionParams: "",
+            additionParams: additionParams,
             attestors: new Attestor[](0),
             signatures: new bytes[](0)
         });
     }
 
-    function _stepFor(Attestation memory att) internal pure returns (RequestStep memory) {
+    function _stepFor(uint256 jobId, Attestation memory att) internal view returns (RequestStep memory) {
         return RequestStep({
             methodHash: keccak256(bytes(att.request.method)),
             urlHash: keccak256(bytes(att.request.url)),
             bodyHash: keccak256(bytes(att.request.body)),
             responseResolveHash: keccak256(abi.encode(new bytes32[](0))),
             additionParamsHash: keccak256(bytes(att.additionParams)),
+            expectedJobBinding: hook.jobBindingFor(jobId),
             maxAge: 300,
-            pinnedAttestor: address(0)
+            timeUnit: TimeUnit.Milliseconds,
+            allowedAttestors: new address[](0),
+            minAttestorsRequired: 0
         });
+    }
+
+    function _toHexString(bytes32 v) internal pure returns (string memory) {
+        bytes memory out = new bytes(66);
+        out[0] = "0"; out[1] = "x";
+        for (uint256 i = 0; i < 32; ++i) {
+            uint8 b = uint8(v[i]);
+            out[2 + 2*i]     = _hexChar(b >> 4);
+            out[2 + 2*i + 1] = _hexChar(b & 0x0f);
+        }
+        return string(out);
+    }
+    function _hexChar(uint8 n) internal pure returns (bytes1) {
+        return bytes1(n < 10 ? n + 0x30 : n + 0x57);
     }
 
     // --------------------------------------------------------- happy path
@@ -118,17 +141,19 @@ contract FullLifecycleTest is Test {
 
         // c) Build the attestation spec (single step).
         Attestation memory att = _makeAtt(
+            jobId,
             "https://api.example.com/coins/bitcoin",
             "{\"price_usd\":67234.51}"
         );
         RequestStep[] memory steps = new RequestStep[](1);
-        steps[0] = _stepFor(att);
+        steps[0] = _stepFor(jobId, att);
 
         AttestationSpec memory spec = AttestationSpec({
             steps: steps,
             bindings: new DataBinding[](0),
             deliverableSourceStep: 0,
             customVerifier: address(0),
+            zkTlsVerifierSnapshot: address(0),
             configured: false
         });
 
@@ -172,16 +197,18 @@ contract FullLifecycleTest is Test {
         core.setBudget(jobId, address(usdc), BUDGET, "");
 
         Attestation memory att = _makeAtt(
+            jobId,
             "https://api.example.com/coins/bitcoin",
             "{\"price_usd\":67234.51}"
         );
         RequestStep[] memory steps = new RequestStep[](1);
-        steps[0] = _stepFor(att);
+        steps[0] = _stepFor(jobId, att);
         AttestationSpec memory spec = AttestationSpec({
             steps: steps,
             bindings: new DataBinding[](0),
             deliverableSourceStep: 0,
             customVerifier: address(0),
+            zkTlsVerifierSnapshot: address(0),
             configured: false
         });
 
@@ -224,14 +251,15 @@ contract FullLifecycleTest is Test {
         vm.prank(PROVIDER);
         core.setBudget(jobId, address(usdc), BUDGET, "");
 
-        Attestation memory att = _makeAtt("https://x", "v");
+        Attestation memory att = _makeAtt(jobId, "https://x", "v");
         RequestStep[] memory steps = new RequestStep[](1);
-        steps[0] = _stepFor(att);
+        steps[0] = _stepFor(jobId, att);
         AttestationSpec memory spec = AttestationSpec({
             steps: steps,
             bindings: new DataBinding[](0),
             deliverableSourceStep: 0,
             customVerifier: address(0),
+            zkTlsVerifierSnapshot: address(0),
             configured: false
         });
 

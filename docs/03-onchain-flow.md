@@ -8,6 +8,29 @@ This document walks through `createJob → fund → submit → complete` for a
 job using `ZkTlsAttestationHook`. It assumes you have read
 [02-architecture](02-architecture.md) and know the players.
 
+> **v2 review-fixes deltas to the flow below.** Substantive changes from
+> the original v1 narrative:
+> - **`fund` with empty `optParams`** now reverts `SpecRequired()`; it was
+>   a silent no-op in v1.
+> - **`_postFund`** now also validates each step's `expectedJobBinding`
+>   equals `keccak256(jobId, address(this), block.chainid)`, that
+>   `maxAge ∈ [1, 24 h]`, that at least one of `methodHash` / `urlHash` /
+>   `bodyHash` is non-zero, and that the customVerifier is on the
+>   `trustedExtensionVerifiers` allowlist (or is `address(0)`).
+> - **`_preSubmit`** uses `spec.zkTlsVerifierSnapshot` instead of the live
+>   `zkTlsVerifier` (so verifier rotation doesn't break in-flight jobs).
+>   The `AlreadyValidated` check has been removed (core state machine
+>   already prevents resubmission); the `envelopeCommitments` write stays
+>   for indexing.
+> - **Quorum check**: the old single-`pinnedAttestor` is gone, replaced by
+>   counting `att.attestors ∩ step.allowedAttestors` against
+>   `step.minAttestorsRequired`.
+> - **Staleness**: the timestamp unit is now `step.timeUnit` (Seconds or
+>   Milliseconds), with a 30-second forward-skew tolerance.
+> - **Data bindings**: substring search uses `_containsBounded` (delimiter
+>   set `" , } : & = /`), and a binding can be dynamic via `fromExtractKey`
+>   (extracting from `atts[fromStep].data` at submit time).
+
 ---
 
 ## 3.1 The four canonical transactions

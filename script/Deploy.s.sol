@@ -35,12 +35,18 @@ contract Deploy is Script {
             verifier = primusVerifierFor(block.chainid);
         }
 
+        // Owner controls verifier rotation + the customVerifier allowlist.
+        // Defaults to the broadcasting EOA via env or msg.sender at runtime.
+        address owner = vm.envOr("HOOK_OWNER", address(0));
+
         console2.log("chainid          :", block.chainid);
         console2.log("ERC-8183 core    :", core);
         console2.log("Primus verifier  :", verifier);
+        console2.log("Hook owner       :", owner);
 
         vm.startBroadcast();
-        hook = address(new ZkTlsAttestationHook(core, verifier));
+        if (owner == address(0)) owner = msg.sender;
+        hook = address(new ZkTlsAttestationHook(core, verifier, owner));
         vm.stopBroadcast();
 
         console2.log("Hook deployed at :", hook);

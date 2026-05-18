@@ -50,7 +50,9 @@ contract DeployTestnet is Script {
         usdc.mint(deployer, 1_000_000 * 1e6); // 1M USDC, plenty
 
         // 3) The hook — points at the deployed Primus verifier and our core.
-        ZkTlsAttestationHook hook = new ZkTlsAttestationHook(address(core), PRIMUS_BASE_SEPOLIA);
+        //    Deployer is also the hook's owner (controls verifier rotation +
+        //    customVerifier allowlist).
+        ZkTlsAttestationHook hook = new ZkTlsAttestationHook(address(core), PRIMUS_BASE_SEPOLIA, deployer);
 
         // 4) Wire up — admin permissions: whitelist the hook and allow USDC.
         core.setHookWhitelist(address(hook), true);

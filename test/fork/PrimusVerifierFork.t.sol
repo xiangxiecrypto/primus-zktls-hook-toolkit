@@ -57,7 +57,7 @@ contract PrimusVerifierForkTest is Test {
         vm.skip(!forked);
         // Use a non-zero placeholder for the core address; constructor only
         // rejects zero addresses, not non-deployed addresses.
-        ZkTlsAttestationHook hook = new ZkTlsAttestationHook(address(0xDEAD), PRIMUS_BASE_SEPOLIA);
+        ZkTlsAttestationHook hook = new ZkTlsAttestationHook(address(0xDEAD), PRIMUS_BASE_SEPOLIA, address(0xada));
         assertEq(hook.zkTlsVerifier(), PRIMUS_BASE_SEPOLIA);
     }
 

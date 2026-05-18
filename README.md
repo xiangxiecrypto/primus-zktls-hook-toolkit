@@ -129,14 +129,35 @@ primus-zktls-hook-toolkit/
 
 | Item | State |
 |---|---|
-| Hook contract (upstream PR draft) | branch pushed to fork; PR not yet opened |
-| Solidity unit tests (hook) | 33 / 33 passing |
-| Solidity integration tests (real ERC8183 + extension + SDK round-trip) | 16 / 16 passing |
+| Hook contract upstream PR | [erc-8183/hook-contracts#46](https://github.com/erc-8183/hook-contracts/pull/46) — 12 review items addressed in fork branch `feature/zktls-attestation-hook-review-fixes` |
+| Solidity unit tests (hook) | 43 / 43 passing |
+| Solidity integration tests (real ERC8183 + extension verifiers) | 15 / 15 passing |
 | Solidity fork tests vs live Primus verifier on Base Sepolia | 6 / 6 passing |
-| TypeScript SDK tests | 35 / 35 passing |
-| Reference extension verifier | `LLMAnswerLengthVerifier` (deployed + tested both happy + rejecting paths) |
+| TypeScript SDK tests | 42 / 42 passing |
+| Reference extension verifier | `LLMAnswerLengthVerifier` |
 | Multi-chain deploy script | 7 chains wired (Base / Base Sepolia / Sepolia / BNB / BNB Testnet / Arbitrum / Linea / Scroll) |
-| End-to-end on Base Sepolia | 5 completed jobs, 1 rejected-by-customVerifier job |
+| End-to-end on Base Sepolia | 5 completed jobs against the **v1** hook deployment at `0xd954…9D1A` |
+
+### Review-fixes update (v2)
+
+The hook has been rewritten to address the 12 items from PR #46's review. The updated source lives at `lib/hook-contracts/contracts/hooks/ZkTlsAttestationHook.sol`. Highlights:
+
+- **Cross-job binding** — `RequestStep.expectedJobBinding` = `keccak256(jobId, hookAddress, chainId)`; provider embeds it in `additionParams`; hook checks via `_contains`.
+- **EOA-verifier rejection** — `_requireContract` (extcodesize) at constructor, fund, and admin paths.
+- **Quorum** — `pinnedAttestor` replaced with `allowedAttestors[]` + `minAttestorsRequired`.
+- **maxAge bounds** — `[1, 24 h]` enforced.
+- **Empty `optParams` reverts `SpecRequired`** — no silent no-op.
+- **`trustedExtensionVerifiers`** — Ownable allowlist; customVerifier must be on it (or `address(0)`).
+- **`TimeUnit` enum** — per-step Seconds | Milliseconds, plus 30-s forward-skew tolerance.
+- **Dynamic data bindings** — `DataBinding.fromExtractKey` lifts the static-only restriction.
+- **`_containsBounded`** — match must be bracketed by `" , } : & = /`.
+- **Two-step verifier rotation** — Ownable propose/activate with 7-day delay; per-job snapshot in spec.
+
+The hook constructor is now 3-arg: `(erc8183Core, zkTlsVerifier, owner)`. The SDK's `buildSpec(job)` is now `buildSpec(job, ctx)` where `ctx = { jobId, hookAddress, chainId }`; `runJob(job, opts)` requires the same `ctx`.
+
+### Live deployment vs. updated code
+
+The Base Sepolia deployment at `0xd954…9D1A` is the **v1 hook** — the original PR head. The toolkit source is now **v2**. To use v2 end-to-end, redeploy via `forge script script/DeployTestnet.s.sol:DeployTestnet`. The historical v1 lifecycles in [docs/05-deployment.md](docs/05-deployment.md) remain on-chain receipts for the original spec model.
 
 ---
 
