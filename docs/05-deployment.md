@@ -24,15 +24,27 @@ docs, and your downstream code all reference one source of truth.
 All addresses live in `sdk/src/addresses.ts`, exported under the name
 `baseSepolia`. They are also reproduced here:
 
+### v2 deployment (current — review-fixes branch)
+
 | Role | Address | Code source | Verified on BaseScan |
 |---|---|---|---|
 | Primus PrimusZKTLS verifier | [`0xCE7cefB3B5A7eB44B59F60327A53c9Ce53B0afdE`](https://sepolia.basescan.org/address/0xCE7cefB3B5A7eB44B59F60327A53c9Ce53B0afdE) | Primus (pre-existing) | yes (Primus) |
-| ERC-8183 core (UUPS proxy) | [`0x2cF22D4013F7228090c6a77B134114aD0761C138`](https://sepolia.basescan.org/address/0x2cF22D4013F7228090c6a77B134114aD0761C138) | `lib/hook-contracts/contracts/erc8183/contracts/ERC8183.sol` | not yet |
-| ERC-8183 implementation | [`0xa76a62721Ffd0f90403dEBDB0ED14C484daD1C23`](https://sepolia.basescan.org/address/0xa76a62721Ffd0f90403dEBDB0ED14C484daD1C23) | same | not yet |
-| MockUSDC | [`0xC4980666C64C570FdC31e3a3c9eEbf441d99f0A4`](https://sepolia.basescan.org/address/0xC4980666C64C570FdC31e3a3c9eEbf441d99f0A4) | `…/erc8183/contracts/mocks/MockUSDC.sol` | not yet |
-| **ZkTlsAttestationHook** | [`0xd954517B4C4f0D3A9be69F4d4e2Cbc6f30ed9D1A`](https://sepolia.basescan.org/address/0xd954517B4C4f0D3A9be69F4d4e2Cbc6f30ed9D1A) | `lib/hook-contracts/contracts/hooks/ZkTlsAttestationHook.sol` (fork branch) | not yet |
-| LLMAnswerLengthVerifier (loose: [20, 800]) | [`0x1145636e77f107212dd3c76b0d43ec53dcc5e393`](https://sepolia.basescan.org/address/0x1145636e77f107212dd3c76b0d43ec53dcc5e393) | `contracts/extensions/LLMAnswerLengthVerifier.sol` | not yet |
-| LLMAnswerLengthVerifier (tight: [1, 10]) | [`0x8fcd75c11068d09ca775762290516bd33374074f`](https://sepolia.basescan.org/address/0x8fcd75c11068d09ca775762290516bd33374074f) | same | not yet |
+| ERC-8183 core (UUPS proxy) | [`0xe823C8f28C469D44FbD07294FBdc1F21eb7e7cC3`](https://sepolia.basescan.org/address/0xe823C8f28C469D44FbD07294FBdc1F21eb7e7cC3) | `lib/hook-contracts/contracts/erc8183/contracts/ERC8183.sol` | not yet |
+| ERC-8183 implementation | [`0x091Fefe9225ab565aEdFb4f5c965dd1c8928c36a`](https://sepolia.basescan.org/address/0x091Fefe9225ab565aEdFb4f5c965dd1c8928c36a) | same | not yet |
+| MockUSDC | [`0xC2371E1af7497D4A4D91dB5dF99e2a91C5fd4Ed3`](https://sepolia.basescan.org/address/0xC2371E1af7497D4A4D91dB5dF99e2a91C5fd4Ed3) | `…/erc8183/contracts/mocks/MockUSDC.sol` | not yet |
+| **ZkTlsAttestationHook (v2)** | [`0xfB761Ad1bffa503bbEC1b39BAED4A6Bc2cf47bA3`](https://sepolia.basescan.org/address/0xfB761Ad1bffa503bbEC1b39BAED4A6Bc2cf47bA3) | `lib/hook-contracts/contracts/hooks/ZkTlsAttestationHook.sol` (review-fixes branch) | not yet |
+| LLMAnswerLengthVerifier (loose [20, 800]) — allowlisted | [`0x3AE0316827f7855f4dcc2C5034CecdDfeF002183`](https://sepolia.basescan.org/address/0x3AE0316827f7855f4dcc2C5034CecdDfeF002183) | `contracts/extensions/LLMAnswerLengthVerifier.sol` | not yet |
+| LLMAnswerLengthVerifier (tight [1, 10]) — allowlisted | [`0x0EA7F1FA6516Eca119644EC60c58F6DAA4ebb3Ed`](https://sepolia.basescan.org/address/0x0EA7F1FA6516Eca119644EC60c58F6DAA4ebb3Ed) | same | not yet |
+
+### v1 historical addresses
+
+These are kept on-chain so the 5 completed v1 job lifecycles remain inspectable. The v1 hook cannot accept new specs — the spec ABI shape has changed in v2.
+
+| Role | Address |
+|---|---|
+| ZkTlsAttestationHook (v1) | [`0xd954517B4C4f0D3A9be69F4d4e2Cbc6f30ed9D1A`](https://sepolia.basescan.org/address/0xd954517B4C4f0D3A9be69F4d4e2Cbc6f30ed9D1A) |
+| ERC-8183 core (v1) | [`0x2cF22D4013F7228090c6a77B134114aD0761C138`](https://sepolia.basescan.org/address/0x2cF22D4013F7228090c6a77B134114aD0761C138) |
+| MockUSDC (v1) | [`0xC4980666C64C570FdC31e3a3c9eEbf441d99f0A4`](https://sepolia.basescan.org/address/0xC4980666C64C570FdC31e3a3c9eEbf441d99f0A4) |
 
 ### Demo wallets
 

@@ -49,4 +49,4 @@ export {
   type PrimusAttRequestLike,
 } from "./primusAdapter.js";
 
-export { baseSepolia, demoWallets } from "./addresses.js";
+export { baseSepolia, baseSepoliaV1, demoWallets } from "./addresses.js";
